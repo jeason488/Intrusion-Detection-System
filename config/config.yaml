@@ -32,8 +32,8 @@ llm:
   distillation_temperature: 1.0
   # DeepSeek API 配置
   use_deepseek: true  # 设置为 true 启用 DeepSeek API
-  deepseek_api_key: "sk-f046c09fe58a4b428494a409020edaaa"  # 已配置
-  deepseek_api_url: "https://api.deepseek.com/v1/chat/completions"
+  deepseek_api_key: ""  # 已配置
+  deepseek_api_url: ""
   deepseek_model: "deepseek-chat"
 
 # 漂移检测配置
