@@ -1,0 +1,92 @@
+# 系统配置
+
+# 数据配置
+data:
+  input_dim: 59  # 输入特征维度（CICIDS2017数据集）
+  batch_size: 32
+  test_split: 0.2
+  val_split: 0.1
+  window_size: 100  # 时间窗口大小
+
+# 模型配置
+models:
+  meta_learning:
+    n_way: 5
+    k_shot: 5
+    n_query: 15
+    meta_lr: 0.0001
+    inner_lr: 0.001
+    adaptation_steps: 5
+  prototype:
+    dim: 128
+    use_global_memory: true
+    alpha_fusion: 0.7
+    beta_update: 0.9
+
+# 大模型配置
+llm:
+  model_name: "bert-base-uncased"
+  max_seq_length: 128
+  batch_size: 16
+  use_distillation: true
+  distillation_temperature: 1.0
+  # DeepSeek API 配置
+  use_deepseek: true  # 设置为 true 启用 DeepSeek API
+  deepseek_api_key: "sk-f046c09fe58a4b428494a409020edaaa"  # 已配置
+  deepseek_api_url: "https://api.deepseek.com/v1/chat/completions"
+  deepseek_model: "deepseek-chat"
+
+# 漂移检测配置
+drift:
+  detection: true
+  bandwidth: 0.1
+  threshold: 0.5
+  adaptation:
+    smoothing: 0.1
+    retention_weight: 0.9
+
+# 训练配置
+training:
+  epochs: 100
+  learning_rate: 0.001
+  weight_decay: 0.0001
+  use_amp: true
+  checkpoint_dir: "./checkpoints"
+
+# 推理配置
+inference:
+  batch_size: 64
+  use_onnx: true
+  onnx_model_path: "./models/onnx/model.onnx"
+
+# API配置
+api:
+  host: "localhost"
+  port: 8000
+  debug: false
+  auth:
+    enabled: true
+    api_keys:
+      - "SECRET_KEY_12345"
+      - "ANOTHER_SECRET_KEY_67890"
+    ip_whitelist:
+      - "127.0.0.1"
+      - "192.168.1.0/24"
+      - "10.0.0.0/8"
+      - "172.16.0.0/12"
+    allow_localhost: true
+    allow_lan: true
+
+# 监控配置
+monitoring:
+  log_level: "INFO"
+  log_file: "./logs/system.log"
+  metrics_interval: 60  # 秒
+
+# 部署配置
+deployment:
+  containerized: true
+  docker_image: "network-security-system:latest"
+  resources:
+    cpu: "4"
+    memory: "8g"

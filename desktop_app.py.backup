@@ -1,0 +1,156 @@
+
+import sys
+import os
+import threading
+import time
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QSystemTrayIcon, 
+                             QMenu, QAction, QMessageBox, QDialog, 
+                             QLabel, QProgressBar, QVBoxLayout, QWidget)
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+from PyQt5.QtCore import QUrl, Qt, QSize
+from PyQt5.QtGui import QIcon, QPixmap
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+class LoadingDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("启动中")
+        self.setFixedSize(320, 120)
+        self.setWindowFlags(Qt.WindowTitleHint | Qt.CustomizeWindowHint)
+        
+        layout = QVBoxLayout()
+        self.label = QLabel("正在启动基于Prototype的网络入侵检测系统...")
+        self.label.setAlignment(Qt.AlignCenter)
+        
+        self.progress = QProgressBar()
+        self.progress.setRange(0, 0)
+        self.progress.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #1a73e8;
+                border-radius: 5px;
+                text-align: center;
+            }
+            QProgressBar::chunk {
+                background-color: #1a73e8;
+            }
+        """)
+        
+        layout.addWidget(self.label)
+        layout.addWidget(self.progress)
+        self.setLayout(layout)
+
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.initUI()
+        self.backend_thread = None
+        self.backend_started = False
+        self.initTrayIcon()
+        
+    def initUI(self):
+        self.setWindowTitle("基于Prototype的网络入侵检测系统")
+        self.setGeometry(100, 100, 1200, 800)
+        self.setMinimumSize(800, 600)
+        
+        self.web_view = QWebEngineView()
+        self.setCentralWidget(self.web_view)
+        
+        self.showMaximized()
+        
+    def initTrayIcon(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        icon_path = os.path.join(BASE_DIR, "frontend", "icon.ico")
+        if os.path.exists(icon_path):
+            self.tray_icon.setIcon(QIcon(icon_path))
+            self.setWindowIcon(QIcon(icon_path))
+        else:
+            pixmap = QPixmap(32, 32)
+            pixmap.fill(Qt.blue)
+            self.tray_icon.setIcon(QIcon(pixmap))
+            self.setWindowIcon(QIcon(pixmap))
+        
+        tray_menu = QMenu()
+        
+        show_action = QAction("显示窗口", self)
+        show_action.triggered.connect(self.showNormal)
+        
+        quit_action = QAction("退出", self)
+        quit_action.triggered.connect(self.quitApplication)
+        
+        tray_menu.addAction(show_action)
+        tray_menu.addAction(quit_action)
+        
+        self.tray_icon.setContextMenu(tray_menu)
+        self.tray_icon.activated.connect(self.onTrayActivated)
+        self.tray_icon.show()
+        
+    def onTrayActivated(self, reason):
+        if reason == QSystemTrayIcon.DoubleClick:
+            self.showNormal()
+            
+    def closeEvent(self, event):
+        event.ignore()
+        self.hide()
+        self.tray_icon.showMessage(
+            "基于Prototype的网络入侵检测系统",
+            "系统已最小化到托盘",
+            QSystemTrayIcon.Information,
+            2000
+        )
+        
+    def quitApplication(self):
+        self.tray_icon.hide()
+        if self.backend_thread and self.backend_thread.is_alive():
+            pass
+        QApplication.quit()
+        
+    def startBackend(self):
+        def run_backend():
+            try:
+                from api.server import start_server
+                from config.config import load_config
+                config = load_config("config/config.yaml")
+                start_server(config)
+            except Exception as e:
+                print(f"Backend error: {e}")
+        
+        self.backend_thread = threading.Thread(target=run_backend, daemon=True)
+        self.backend_thread.start()
+        
+    def loadWebPage(self):
+        for _ in range(30):
+            try:
+                self.web_view.load(QUrl("http://localhost:8000"))
+                return True
+            except:
+                time.sleep(1)
+        return False
+
+def main():
+    app = QApplication(sys.argv)
+    app.setApplicationName("基于Prototype的网络入侵检测系统")
+    app.setQuitOnLastWindowClosed(False)
+    
+    loading_dialog = LoadingDialog()
+    loading_dialog.show()
+    
+    window = MainWindow()
+    window.startBackend()
+    
+    time.sleep(2)
+    
+    if window.loadWebPage():
+        loading_dialog.close()
+        window.show()
+    else:
+        loading_dialog.close()
+        QMessageBox.critical(None, "启动失败", "无法连接到后端服务")
+        sys.exit(1)
+    
+    sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()

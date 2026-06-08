@@ -1,0 +1,74 @@
+
+import os
+import sys
+
+def create_desktop_shortcut():
+    try:
+        import win32com.client
+        import pythoncom
+        
+        pythoncom.CoInitialize()
+        
+        desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+        shortcut_path = os.path.join(desktop_path, "基于Prototype的网络入侵检测系统.lnk")
+        
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        target_path = os.path.join(current_dir, "desktop_app.py")
+        icon_path = os.path.join(current_dir, "frontend", "icon.ico")
+        
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shortcut = shell.CreateShortCut(shortcut_path)
+        
+        shortcut.TargetPath = sys.executable
+        shortcut.Arguments = f'"{target_path}"'
+        shortcut.WorkingDirectory = current_dir
+        
+        if os.path.exists(icon_path):
+            shortcut.IconLocation = f"{icon_path},0"
+        
+        shortcut.Description = "基于Prototype的网络入侵检测系统"
+        shortcut.Save()
+        
+        print(f"快捷方式已创建: {shortcut_path}")
+        return True
+    except Exception as e:
+        print(f"创建快捷方式失败: {e}")
+        return False
+
+def create_batch_file():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    target_path = os.path.join(current_dir, "desktop_app.py")
+    
+    batch_content = f'''@echo off
+cd /d "{current_dir}"
+python "{target_path}"
+pause
+'''
+    
+    batch_path = os.path.join(current_dir, "启动网络入侵检测系统.bat")
+    with open(batch_path, 'w', encoding='gbk') as f:
+        f.write(batch_content)
+    
+    print(f"批处理文件已创建: {batch_path}")
+    return batch_path
+
+if __name__ == "__main__":
+    from create_icon import create_icon
+    
+    icon_path = os.path.join(os.path.dirname(__file__), "frontend", "icon.ico")
+    create_icon(icon_path)
+    
+    create_batch_file()
+    
+    try:
+        import win32com.client
+        create_desktop_shortcut()
+    except ImportError:
+        print("需要安装 pywin32 创建桌面快捷方式")
+        print("正在安装...")
+        os.system("pip install pywin32")
+        try:
+            create_desktop_shortcut()
+        except Exception as e:
+            print(f"仍无法创建快捷方式: {e}")
+            print("已创建批处理文件，可双击运行")
